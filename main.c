@@ -70,29 +70,19 @@ void iformat(unsigned int a, int opnum){     // rs, rt , im   ->   rt  rs  im
   data[j] = rt;
   if( j != 1 && data[j-1] == rs ){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("tem_reg: 0x%08x\n", tem_reg[rs]);
     if(chg == 1){
       Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-      printf("Checksum: 0x%08x\n", Checksum);
-      printf("tem_reg: 0x%08x\n", reg[rs]);
       chg = 0;
       cycle--;
     }
   }
   else if(j != 2 && data[j-2] == rs){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("tem_reg: 0x%08x\n", tem_reg[rs]);
   }
   else{
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg[rs] 0x%08x\n", reg[rs]);
     if(chg == 1){
       Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs];
-      printf("Checksum: 0x%08x\n", Checksum);
-      printf("reg: 0x%08x\n", reg[rs]);
       chg = 0;
       cycle--;
     }
@@ -129,25 +119,15 @@ void bformat(unsigned int a, int opnum){     // rs, rt , im   ->   rs  rt  im
   
   if(j!=1 && data[j-1] == rt){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg[rs] 0x%08x\n", reg[rs]);
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg[rs] 0x%08x\n", reg[rs]);
     data[j] = 0 ;
     j++;
     cycle--;
   }
   else if(j!=1 && data[j-1] == rs){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg[rs] 0x%08x\n", reg[rs]);
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg[rs] 0x%08x\n", reg[rs]);
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg[rs] 0x%08x\n", reg[rs]);
     data[j] = 0 ;
     j++;
     data[j] = 0 ;
@@ -157,15 +137,12 @@ void bformat(unsigned int a, int opnum){     // rs, rt , im   ->   rs  rt  im
   }
   else{
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg[rs] 0x%08x\n", reg[rs]);
   }
 
   if(opnum == 0x10){  // beq
     if(reg[rs] == reg[rt]){
       PC = PC + 4 + im_1 *4;
       Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
-      printf("Checksum: 0x%08x\n", Checksum);
       cycle--;
       return;
     }
@@ -174,7 +151,6 @@ void bformat(unsigned int a, int opnum){     // rs, rt , im   ->   rs  rt  im
     if(reg[rs] != reg[rt]){
       PC = PC + 4 + im_1 *4;
       Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
-      printf("Checksum: 0x%08x\n", Checksum);
       cycle--;
       return;
     }
@@ -189,7 +165,6 @@ void luiformat(unsigned int a){
 
   data[j] = rt ;
   Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
-  printf("Checksum: 0x%08x\n", Checksum);
   
   if(im_1 != im_2)
     im_1 = im_2 - min_im;
@@ -211,18 +186,12 @@ void lsiformat(unsigned int a, int opnum){  // rt  im_1(rs)
   data[j] = rt;
   if( j != 1 && data[j-1] == rs){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("tem_reg: 0x%08x\n", tem_reg[rs]);
   }
   else if(j != 2 && data[j-2] == rs){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("tem_reg: 0x%08x\n", tem_reg[rs]);
   }
   else{
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg: 0x%08x\n", reg[rs]);
   }
 
   if(im_1 != im_2)
@@ -244,11 +213,13 @@ void lsiformat(unsigned int a, int opnum){  // rt  im_1(rs)
 void jformat(unsigned int a){
   int rt_1 = (a & JC_1);
   int rt_2 = (a & JC_2);
-  printf("[%d] EX\n", j);
-  
+
+  Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
+
   if( rt_1 != rt_2)
     rt_1 = rt_2 - min_j;
-
+  data[j]=0;
+  j++;
   PC = rt_1 *4;
 }
 
@@ -261,34 +232,22 @@ void rformat(unsigned int a, int opnum){    // rs  rt  rd   -->  rd  rs  rt
   data[j] = rd;
   if( j != 1 && data[j-1] == rs){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("tem_reg: 0x%08x\n", tem_reg[rs]);
     if(chg == 1){
       Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-      printf("Checksum: 0x%08x\n", Checksum);
-      printf("tem_reg: 0x%08x\n", tem_reg[rs]);
       chg = 0;
     }
   }
   else if(j != 2 && data[j-2] == rs){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("tem_reg: 0x%08x\n", tem_reg[rs]);
     if(chg == 1){
       Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
-      printf("Checksum: 0x%08x\n", Checksum);
-      printf("tem_reg: 0x%08x\n", tem_reg[rs]);
       chg = 0;
     }
   }
   else{
     Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs] ;
-    printf("Checksum: 0x%08x\n", Checksum);
-    printf("reg: 0x%08x\n", reg[rs]);
     if(chg == 1){
       Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs];
-      printf("Checksum: 0x%08x\n", Checksum);
-      printf("tem_reg: 0x%08x\n", reg[rs]);
       chg = 0;
     }
   }
@@ -331,7 +290,7 @@ void findop(unsigned int a){    // ID part
   if(a == 0){ //nop
     Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
     chg = 0;
-    printf("Checksum: 0x%08x\n", Checksum);
+    bn = 0;
     PC=PC+4;
     return;
   }
@@ -353,8 +312,8 @@ void findop(unsigned int a){    // ID part
       iformat(a, opnum);
     else{
       Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
-      printf("Checksum: 0x%08x\n", Checksum);
       chg = 0;
+      bn = 0;
       PC = PC+4;
     }
   }
@@ -410,8 +369,6 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
       break;
     big_e = in_mem[PC];
     cycle --;
-    printf("[%d] IF\n", j);     
-    printf("0x%08x\n", big_e);
     findop(big_e);       // ID stage
     j++;
   }
@@ -436,9 +393,5 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
       printf("0x%08x\n", Da_mem[start +4 * i]);
     }
   }
-  else {
-    printf("unknown instruction\n");
-  }
-
   return 0;
 }
