@@ -23,7 +23,6 @@
 
 
 int data[1000] = {0, };
-
 int reg[32] = {0, };
 int in_mem[65537];   // 0 - 0x00010000(65536)
 int Da_mem[65537];   // 0x10000000(268435456) - 0x10010000 
@@ -33,8 +32,9 @@ unsigned int Checksum = 0x00000000;
 int i = 1;
 
 
-void i_mem(unsigned int rt, unsigned int rs, int im_1, int opnum){ //mem
 
+void i_wB(unsigned int rt, unsigned int rs, int im_1, int opnum){ //mem
+  
   switch(opnum){
     case 0x20:  //addi
       reg[rt] = reg[rs] + im_1;
@@ -54,8 +54,6 @@ void i_mem(unsigned int rt, unsigned int rs, int im_1, int opnum){ //mem
       break;
   }
 }
-
-
 
 
 void iformat(unsigned int a, int opnum, int cycle){     // rs, rt , im   ->   rt  rs  im
@@ -86,20 +84,18 @@ void iformat(unsigned int a, int opnum, int cycle){     // rs, rt , im   ->   rt
     case 0x20:  //addi
       if(im_1 != im_2)
         im_1 = im_2 - min_im;
-      i_mem(rt, rs, im_1, opnum);
+      i_wB(rt, rs, im_1, opnum);
       break;
     case 0x30:   //andi
-      i_mem(rt, rs, im_1, opnum);
+      i_wB(rt, rs, im_1, opnum);
       break;
     case 0x34:    //ori
-      i_mem(rt, rs, im_1, opnum);
+      i_wB(rt, rs, im_1, opnum);
       break;
     case 0x28:   //slti
-      i_mem(rt, rs, im_1, opnum);
+      i_wB(rt, rs, im_1, opnum);
       break;
   }
-  cycle--;
-  PC=PC+4;
 }
 
 
@@ -116,14 +112,14 @@ void bformat(unsigned int a, int opnum, int cycle){     // rs, rt , im   ->   rs
   
   if(opnum == 0x10){  // beq
     if(reg[rs] == reg[rt]){
-      cycle--;
+  
       PC = PC + 4 + im_1 *4;
       return;
     }
   }
   else if(opnum == 0x14){  // bne
     if(reg[rs] != reg[rt]){
-      cycle--;
+  
       PC = PC + 4 + im_1 *4;
       return;
     }
@@ -131,7 +127,7 @@ void bformat(unsigned int a, int opnum, int cycle){     // rs, rt , im   ->   rs
 
   Checksum = (Checksum << 1 | Checksum >> 31) ^ reg[rs];
   printf("Checksum: 0x%08x\n", Checksum); 
-  PC=PC+4;
+
 }
 
 void luiformat(unsigned int a, int cycle){
@@ -156,8 +152,7 @@ void luiformat(unsigned int a, int cycle){
   reg[rt] = im_1; 
 
 
-  cycle--;
-  PC=PC+4;
+
 }
 
 
@@ -183,10 +178,8 @@ void lsiformat(unsigned int a, int opnum, int cycle){  // rt  im_1(rs)
     im_2 = reg[rs] - mem_int + im_1;
     Da_mem[im_2] = reg[rt];
   }
-  PC=PC+4;
-  cycle--;  
+  
 }
-
 
 void jformat(unsigned int a, int cycle){
   int rt_1 = (a & JC_1);
@@ -198,10 +191,8 @@ void jformat(unsigned int a, int cycle){
   if( rt_1 != rt_2)
     rt_1 = rt_2 - min_j;
   
-  cycle--;
   PC = rt_1 *4;
 }
-
 
 void rformat(unsigned int a, int opnum, int cycle){    // rs  rt  rd   -->  rd  rs  rt
   unsigned int rs = ((a & rsCo) >> 21);
@@ -240,17 +231,16 @@ void rformat(unsigned int a, int opnum, int cycle){    // rs  rt  rd   -->  rd  
     default:
       break;
     }
-  cycle--;
-  PC=PC+4;
+
 }
 
-void findop(unsigned int a, int cycle){    // ID part
+void findop(unsigned int a, int cycle){        //ID part
   unsigned int opnum;
 
   if(a == 0){ //nop
     Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
-    PC=PC+4;
-    cycle--;
+  
+
     return;
   }
   if(cycle ==0)
@@ -274,10 +264,14 @@ void findop(unsigned int a, int cycle){    // ID part
       iformat(a, opnum, cycle);
     else{
       Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
-      cycle--;
+  
       PC = PC+4;
     }
   }
+}
+
+void IF_stage(){
+  PC = PC + 4;
 }
 
 
@@ -293,19 +287,18 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
   char *buff;
   FILE * file;
   char * n;
-  int a=0;
   int start=0; 
   int num;
   unsigned int little_e;
   unsigned int big_e;
   int cycle = atoi(argv[2]);
+  int * stage;
   buff = argv[1];
   file = fopen(buff, "rb");
 
-
+  stage = (int*)malloc(sizeof(int) * cycle);
   memset(in_mem, -1, sizeof(in_mem));
   memset(Da_mem, -1, sizeof(Da_mem));
-
   if(file==NULL){
     printf( "파일을 읽는데 실패했습니다 \n");\
     return 0;
@@ -313,7 +306,6 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
 
   if(argc == 3)  // 입력값이 두 개 일 때
     return 0; 
-
 
   while(!feof(file)){  // 먼저 instruction을 순서대로 복사한다.
     fread(&little_e, 4, 1, file);
@@ -325,20 +317,25 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
   }
 
 
-  while(1){               // IF stage
-    if(cycle == 0)
-      break;
-    big_e = in_mem[PC];
-    cycle--;
-    printf("0x%08x\n", big_e);
-    printf("[%d] IF\n", i);     // 
-    findop(big_e, cycle);       // ID stage
-    i++;
-  }
+  for(int i = 0; i < cycle; i++){
+    printf("0x%08x\n", in_mem[PC]);
 
+    for(int k = 0;  k < i; k++)
+      stage[k]++; 
+    
+    if(stage[i] == 1)
+      IF_stage();              // IF stage 
+    if(stage[i] == 2)
+      
+    if(stage[i] == 3)
+      findop(big_e, cycle);       // ID stage
+    if(stage[i] == 4)
+
+}
+
+    
 
   printf("Checksum: 0x%08x\n", Checksum); 
-
   if(!strcmp(argv[3], "reg")){   //reg 출력
     for(int i = 0; i < 32; i++){
     printf("$%d: 0x%08x\n", i, reg[i]);
@@ -360,6 +357,7 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
   else {
     printf("unknown instruction\n");
   }
+
 
   return 0;
 }
