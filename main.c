@@ -68,6 +68,7 @@ void iformat(unsigned int a, int opnum){     // rs, rt , im   ->   rt  rs  im
 
 
   data[j] = rt;
+
   if( j != 1 && data[j-1] == rs ){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
     if(chg == 1){
@@ -219,7 +220,6 @@ void jformat(unsigned int a){
   if( rt_1 != rt_2)
     rt_1 = rt_2 - min_j;
   data[j]=0;
-  j++;
   PC = rt_1 *4;
 }
 
@@ -230,6 +230,7 @@ void rformat(unsigned int a, int opnum){    // rs  rt  rd   -->  rd  rs  rt
   unsigned int rd = ((a & rdCo) >> 11);
 
   data[j] = rd;
+
   if( j != 1 && data[j-1] == rs){
     Checksum = (Checksum << 1 | Checksum >> 31) ^ tem_reg[rs];
     if(chg == 1){
@@ -252,7 +253,6 @@ void rformat(unsigned int a, int opnum){    // rs  rt  rd   -->  rd  rs  rt
     }
   }
 
-
   switch (opnum)
     {
     case 0x20:  // add
@@ -268,9 +268,12 @@ void rformat(unsigned int a, int opnum){    // rs  rt  rd   -->  rd  rs  rt
       reg[rd] = reg[rs] | reg[rt];
       break;
     case 0x2a:  // slt
-      if( reg[rs] < reg[rt])
+      if( reg[rs] < reg[rt]){
+        tem_reg[rd] = reg[rd];
         reg[rd]=1;
+      }
       else{
+        tem_reg[rd] = reg[rd];
         reg[rd]=0;
       }
       break;
@@ -289,11 +292,13 @@ void findop(unsigned int a){    // ID part
 
   if(a == 0){ //nop
     Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
+    data[j]=0;
     chg = 0;
     bn = 0;
     PC=PC+4;
     return;
   }
+
   opnum = ((a & Icom) >> 24);
   if(opnum == 0){
     opnum = (a & Rcom);
@@ -312,6 +317,7 @@ void findop(unsigned int a){    // ID part
       iformat(a, opnum);
     else{
       Checksum = (Checksum << 1 | Checksum >> 31) ^ 0;
+      data[j]=0;
       chg = 0;
       bn = 0;
       PC = PC+4;
@@ -363,7 +369,6 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
     instru = instru + 4;
   }
 
-
   while(1){               // IF stage
     if(cycle == 1)
       break;
@@ -374,6 +379,18 @@ int main(int argc, char * argv[]){  // 1. bin file 2. cycle Number 3. reg or mem
   }
 
   printf("Checksum: 0x%08x\n", Checksum); 
+
+  if(data[j-1]!=0){
+    reg[data[j-1]] = tem_reg[data[j-1]];
+  }
+
+  if(data[j-2]!=0){
+    reg[data[j-2]] = tem_reg[data[j-2]];
+  }
+
+  if(data[j-3]!=0){
+    reg[data[j-3]] = tem_reg[data[j-3]];
+  }
 
   if(!strcmp(argv[3], "reg")){   //reg 출력
     for(int i = 0; i < 32; i++){
